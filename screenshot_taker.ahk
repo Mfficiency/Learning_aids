@@ -62,6 +62,8 @@ F8::
         fileName := Format("{}_{}-of-{}.png", safeUrl, idx, iterations)
         fullPath := saveFolder "\" fileName
 
+        ; ... [Lines before ImageSearch remain the same] ...
+
         ; ========= IMAGE SEARCH AND CLICK =========
         foundX := 0, foundY := 0
         ErrorLevel := 1
@@ -71,6 +73,12 @@ F8::
 
         if (ErrorLevel = 0)     ; 0 = found
         {
+            ; *** DEBUG WARNING: Dropdown Found ***
+            MsgBox(Format("✅ Dropdown FOUND in iteration {} at X={}, Y={}. Preparing to click...", idx, foundX, foundY))
+            
+            ; *** DEBUG PAUSE: Wait for 2 seconds so you can visually confirm the mouse location ***
+            Sleep(2000)
+
             ; *** FIX: Calculate center coordinates to ensure a successful click ***
             clickX := foundX + imageWidth/2
             clickY := foundY + imageHeight/2
@@ -79,6 +87,13 @@ F8::
             Click("Left")
             Sleep(500)
         }
+        else 
+        {
+            ; *** DEBUG WARNING: Dropdown NOT Found ***
+            MsgBox(Format("❌ Dropdown NOT FOUND in iteration {}. Skipping click.", idx))
+        }
+
+; ... [Lines after the click block remain the same] ...
 
         ; ========= SCREENSHOT =========
         CaptureFullScreen(fullPath)
