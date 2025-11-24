@@ -15,12 +15,20 @@ MsgBox("Screenshot helper is running.`nF8 = start capture`nCtrl+F8 = exit")
 F8::
 {
     ; ========= CONFIG =========
-    saveFolder    := "D:\Code\school\screenshots"          ; Folder for screenshots
-    imageToFind   := "input\answers_dropdown.PNG"          ; Image for ImageSearch
-    iterations    := 10                                    ; How many times to repeat
-    scrollLines   := 8                                     ; Mouse wheel steps after each shot
+    saveFolder      := "D:\Code\school\screenshots"          ; Folder for screenshots
+    imageToFind     := "input\answers_dropdown.PNG"          ; Image for ImageSearch
+    iterations      := 10                                    ; How many times to repeat
+    scrollLines     := 8                                     ; Mouse wheel steps after each shot
+    
+    ; *** IMPORTANT: Measure your dropdown image file and adjust these dimensions ***
+    imageWidth      := 288                                    ; Example width of the dropdown image
+    imageHeight     := 36                                     ; Example height of the dropdown image
 
     MsgBox(Format("Starting capture loop with {} iterations.`nPress Ctrl+F8 to exit early.", iterations))
+
+    ; *** IMPROVEMENT: Activate the target window before starting the loop ***
+    WinActivate("ahk_exe chrome.exe") ; <-- CHANGE 'chrome.exe' to your browser's executable (e.g., 'msedge.exe', 'firefox.exe')
+    Sleep(200)
 
     ; Create folder if it does not exist
     if !DirExist(saveFolder)
@@ -28,11 +36,20 @@ F8::
 
     ; Get page URL once at the beginning and sanitize it for filename use
     pageUrl := GetActivePageUrl()
-    if (pageUrl = "")
-        pageUrl := "no_url_detected"
-
-    ; Replace characters that are illegal in Windows filenames
-    safeUrl := RegExReplace(pageUrl, "[\\/:*?""<>|]", "_")
+    if (pageUrl = "") {
+        safeUrl := "no_url_detected"
+    } else {
+        ; *** NEW LOGIC: Extract text after the last forward slash (/) ***
+        urlParts := StrSplit(pageUrl, "/")
+        lastPart := urlParts[urlParts.Length]
+        
+        ; Sanitize only the last part of the URL
+        safeUrl := SanitizeFileName(lastPart)
+        
+        ; Use "no_url_detected" if the last part is empty after splitting
+        if (safeUrl = "")
+            safeUrl := "no_url_detected"
+    }
 
     ; Use screen coordinates for searching and clicking
     CoordMode("Pixel", "Screen")
@@ -41,7 +58,7 @@ F8::
     Loop iterations
     {
         idx := A_Index
-        ; Example: https___site_com_1-of-10.png
+        ; Example: page_slug-1-of-10.png
         fileName := Format("{}_{}-of-{}.png", safeUrl, idx, iterations)
         fullPath := saveFolder "\" fileName
 
@@ -49,11 +66,16 @@ F8::
         foundX := 0, foundY := 0
         ErrorLevel := 1
 
-        ImageSearch(&foundX, &foundY, 0, 0, A_ScreenWidth, A_ScreenHeight, imageToFind)
+        ; Added *50 to tolerance for better matching on potentially anti-aliased elements
+        ImageSearch(&foundX, &foundY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*50 " imageToFind)
 
-        if (ErrorLevel = 0)  ; 0 = found
+        if (ErrorLevel = 0)     ; 0 = found
         {
-            MouseMove(foundX, foundY, 10)
+            ; *** FIX: Calculate center coordinates to ensure a successful click ***
+            clickX := foundX + imageWidth/2
+            clickY := foundY + imageHeight/2
+
+            MouseMove(clickX, clickY, 10)
             Click("Left")
             Sleep(500)
         }
@@ -65,7 +87,7 @@ F8::
         if (idx < iterations)
         {
             Send("{WheelDown " scrollLines "}")
-            Sleep(700)
+            Sleep(1500) ; *** IMPROVEMENT: Increased sleep to allow page elements to load after scrolling ***
         }
     }
 
@@ -74,6 +96,15 @@ F8::
 
 
 ; ========= FUNCTIONS =========
+
+; Remove characters that are illegal in Windows filenames
+SanitizeFileName(name) {
+    ; **FIXED LINE 79:** Correctly escaping the double-quote character (") using a backtick (`")
+    invalid := ["\", "/", ":", "*", "?", "`"", "<", ">", "|"]
+    for _, char in invalid
+        name := StrReplace(name, char, "_")
+    return Trim(name)
+}
 
 ; Get the URL of the active browser tab by focusing the address bar and copying it
 GetActivePageUrl() {
@@ -93,7 +124,6 @@ GetActivePageUrl() {
     ; Restore clipboard
     A_Clipboard := clipBackup
 
-    ; Trim whitespace
     url := Trim(url)
     return url
 }
