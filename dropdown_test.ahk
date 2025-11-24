@@ -15,8 +15,9 @@ MsgBox("Dropdown Test Script is running.`nF9 = Test Dropdown Click`nCtrl+F8 = ex
 F9::
 {
     ; ========= CONFIG (Copied from main script) =========
-    imageToFind     := "answers_dropdown.PNG"
-    imageWidth      := 45  ; You must verify this is correct
+    ; *** FIX: Reverting to the relative path assuming image is in the 'input' folder ***
+    imageToFind     := "input\answers_dropdown.PNG"
+    imageWidth      := 45   ; You must verify this is correct
     imageHeight     := 30   ; You must verify this is correct
 
     ; Activate the target window before starting the test
@@ -33,8 +34,8 @@ F9::
     foundX := 0, foundY := 0
     ErrorLevel := 1
 
-    ; Using *50 tolerance
-    ImageSearch(&foundX, &foundY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*50 " imageToFind)
+    ; *** IMPROVEMENT: Using *70 tolerance for better matching ***
+    ImageSearch(&foundX, &foundY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*70 " imageToFind)
 
     if (ErrorLevel = 0)     ; 0 = found
     {
@@ -55,6 +56,6 @@ F9::
     }
     else 
     {
-        MsgBox("❌ Dropdown NOT FOUND. Check your image file path and ensure the image is visible on the screen.")
+        MsgBox(Format("❌ Dropdown NOT FOUND. ErrorLevel is %ErrorLevel%. Check image path: '%imageToFind%'"))
     }
 }

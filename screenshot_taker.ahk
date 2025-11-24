@@ -64,35 +64,6 @@ F8::
 
         ; ... [Lines before ImageSearch remain the same] ...
 
-        ; ========= IMAGE SEARCH AND CLICK =========
-        foundX := 0, foundY := 0
-        ErrorLevel := 1
-
-        ; Added *50 to tolerance for better matching on potentially anti-aliased elements
-        ImageSearch(&foundX, &foundY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*50 " imageToFind)
-
-        if (ErrorLevel = 0)     ; 0 = found
-        {
-            ; *** DEBUG WARNING: Dropdown Found ***
-            MsgBox(Format("✅ Dropdown FOUND in iteration {} at X={}, Y={}. Preparing to click...", idx, foundX, foundY))
-            
-            ; *** DEBUG PAUSE: Wait for 2 seconds so you can visually confirm the mouse location ***
-            Sleep(2000)
-
-            ; *** FIX: Calculate center coordinates to ensure a successful click ***
-            clickX := foundX + imageWidth/2
-            clickY := foundY + imageHeight/2
-
-            MouseMove(clickX, clickY, 10)
-            Click("Left")
-            Sleep(500)
-        }
-        else 
-        {
-            ; *** DEBUG WARNING: Dropdown NOT Found ***
-            MsgBox(Format("❌ Dropdown NOT FOUND in iteration {}. Skipping click.", idx))
-        }
-
 ; ... [Lines after the click block remain the same] ...
 
         ; ========= SCREENSHOT =========
