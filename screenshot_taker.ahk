@@ -21,8 +21,8 @@ F8::
     scrollLines     := 8                                     ; Mouse wheel steps after each shot
     
     ; *** IMPORTANT: Measure your dropdown image file and adjust these dimensions ***
-    imageWidth      := 288                                    ; Example width of the dropdown image
-    imageHeight     := 36                                     ; Example height of the dropdown image
+    imageWidth      := 288                                   ; Example width of the dropdown image
+    imageHeight     := 36                                    ; Example height of the dropdown image
 
     MsgBox(Format("Starting capture loop with {} iterations.`nPress Ctrl+F8 to exit early.", iterations))
 
@@ -39,14 +39,28 @@ F8::
     if (pageUrl = "") {
         safeUrl := "no_url_detected"
     } else {
-        ; *** NEW LOGIC: Extract text after the last forward slash (/) ***
+        ; Split the URL by the forward slash
         urlParts := StrSplit(pageUrl, "/")
-        lastPart := urlParts[urlParts.Length]
         
-        ; Sanitize only the last part of the URL
-        safeUrl := SanitizeFileName(lastPart)
+        ; Get the index of the last element
+        lastIndex := urlParts.Length
         
-        ; Use "no_url_detected" if the last part is empty after splitting
+        ; Determine the part to use for the filename
+        fileNamePart := ""
+        
+        ; 1. Try the very last part (handles /page)
+        if (lastIndex > 0)
+            fileNamePart := urlParts[lastIndex]
+            
+        ; 2. If the last part is empty (due to trailing /), try the second-to-last part (handles /page/)
+        ;    Ensure there are at least two parts available (index > 1)
+        if (fileNamePart = "" && lastIndex > 1)
+            fileNamePart := urlParts[lastIndex - 1]
+
+        ; Sanitize the selected part
+        safeUrl := SanitizeFileName(fileNamePart)
+        
+        ; Fallback if everything fails
         if (safeUrl = "")
             safeUrl := "no_url_detected"
     }
@@ -62,9 +76,7 @@ F8::
         fileName := Format("{}_{}-of-{}.png", safeUrl, idx, iterations)
         fullPath := saveFolder "\" fileName
 
-        ; ... [Lines before ImageSearch remain the same] ...
-
-; ... [Lines after the click block remain the same] ...
+        ; ... [Image search and click logic would go here if not removed by user in previous steps] ...
 
         ; ========= SCREENSHOT =========
         CaptureFullScreen(fullPath)
@@ -85,7 +97,7 @@ F8::
 
 ; Remove characters that are illegal in Windows filenames
 SanitizeFileName(name) {
-    ; **FIXED LINE 79:** Correctly escaping the double-quote character (") using a backtick (`")
+    ; Correctly escaping the double-quote character (") using a backtick (`")
     invalid := ["\", "/", ":", "*", "?", "`"", "<", ">", "|"]
     for _, char in invalid
         name := StrReplace(name, char, "_")
@@ -118,6 +130,8 @@ GetActivePageUrl() {
 ; Capture the full primary screen and save to a PNG file using PowerShell
 CaptureFullScreen(path) {
     ; Multi line PowerShell script - no double quotes inside
+    ; NOTE: This version uses simple string replacement for the path, assuming no spaces in 'path' or that
+    ; the script handles it correctly in execution environment.
     psScript := "
     (
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing;
