@@ -15,6 +15,8 @@ class StackedSquaresApp(tk.Tk):
         self.title("Stacked Squares / Ground Holes")
         self.resizable(False, False)
 
+        self.show_sum = False  # whether to display the 3rd column (sum)
+
         # Top bar with inputs
         top = ttk.Frame(self, padding=10)
         top.pack(fill="x")
@@ -29,10 +31,15 @@ class StackedSquaresApp(tk.Tk):
         b_entry = ttk.Entry(top, width=8, textvariable=self.b_var)
         b_entry.grid(row=0, column=3, padx=(0,16))
 
-        self.render_btn = ttk.Button(top, text="Render", command=self.render)
-        self.render_btn.grid(row=0, column=4)
+        # Buttons: Add and Reset
+        btns = ttk.Frame(top)
+        btns.grid(row=0, column=4, padx=(0,0))
+        self.add_btn = ttk.Button(btns, text="Add", command=self.on_add)
+        self.add_btn.grid(row=0, column=0, padx=(0,8))
+        self.reset_btn = ttk.Button(btns, text="Reset", command=self.on_reset)
+        self.reset_btn.grid(row=0, column=1)
 
-        # Render on typing too (nice quality-of-life)
+        # Live re-render on typing; if sum is shown, keep it in sync too
         a_entry.bind("<KeyRelease>", lambda e: self.render())
         b_entry.bind("<KeyRelease>", lambda e: self.render())
 
@@ -53,17 +60,34 @@ class StackedSquaresApp(tk.Tk):
                 return 0
         a = to_int(self.a_var.get())
         b = to_int(self.b_var.get())
-        return [a, b]
+        return a, b
+
+    def on_add(self):
+        self.show_sum = True
+        self.render()
+
+    def on_reset(self):
+        self.show_sum = False
+        self.render()
 
     def render(self):
-        values = self.parse_inputs()
+        a, b = self.parse_inputs()
+        values = [a, b]
+        labels = ["A", "B"]
 
-        # Compute vertical extents
+        if self.show_sum:
+            values.append(a + b)
+            labels.append("A+B")
+
+        # Compute vertical extents (3.7+ compatible)
         positives = [v for v in values if v > 0]
         negatives = [-v for v in values if v < 0]
-
         max_up = max([0] + positives)
         max_down = max([0] + negatives)
+
+        # Ensure at least 1 cell visible for context
+        max_up = max(max_up, 1)
+        max_down = max(max_down, 1)
 
         cols = len(values)
         width = PADDING*2 + cols*CELL + (cols-1)*GAP
@@ -112,17 +136,19 @@ class StackedSquaresApp(tk.Tk):
                     self.canvas.create_line(x0, y0, x1, y1, fill=LINE_COLOR)
                     self.canvas.create_line(x1, y0, x0, y1, fill=LINE_COLOR)
             else:
-                # 0 -> nothing; show a faint placeholder outline at ground if you want
+                # 0 -> nothing
                 pass
 
-            # Column label under ground
-            label = f"{v}"
-            self.canvas.create_text((x0+x1)//2, height - PADDING//2, text=label)
+            # Column value label under ground
+            self.canvas.create_text((x0+x1)//2, height - PADDING//2, text=str(v))
+
+            # Column name above column
+            self.canvas.create_text((x0+x1)//2, PADDING//2, text=labels[i])
 
         # Update status text
-        self.status.set(f"Rendered columns: {values}  |  Ground at y = {baseline_y}")
+        status_cols = " | ".join(f"{labels[i]}={values[i]}" for i in range(len(values)))
+        self.status.set(f"{status_cols}  |  Ground at y = {baseline_y}  |  Sum shown: {self.show_sum}")
 
 if __name__ == "__main__":
     app = StackedSquaresApp()
     app.mainloop()
-
