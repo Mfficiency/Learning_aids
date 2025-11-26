@@ -1,7 +1,10 @@
 #SingleInstance Force
 
+; Global flag to stop the loop
+global stopLoop := false
+
 ; Show a warning when the script is activated
-MsgBox("Screenshot helper is running.`nF8 = start capture`nCtrl+F8 = exit")
+MsgBox("Screenshot helper is running.`nF8 = start capture`nSpace = stop current capture`nCtrl+F8 = exit")
 
 ; ========= EXIT HOTKEY =========
 ^F8::
@@ -10,12 +13,23 @@ MsgBox("Screenshot helper is running.`nF8 = start capture`nCtrl+F8 = exit")
     ExitApp()
 }
 
+; ========= STOP LOOP HOTKEY =========
+Space::
+{
+    global stopLoop
+    stopLoop := true
+    ToolTip("Stopping after current screenshot...")
+    SetTimer(() => ToolTip(), -2000)  ; Hide tooltip after 2 seconds
+}
 
 ; ========= MAIN HOTKEY =========
 F8::
 {
+    global stopLoop
+    stopLoop := false  ; Reset the stop flag
+    
     ; ========= CONFIG =========
-    saveFolder      := "D:\Code\school\screenshots"          ; Folder for screenshots
+    baseFolder      := "D:\Code\school\screenshots"          ; Base folder for screenshots
     imageToFind     := "input\answers_dropdown.PNG"          ; Image for ImageSearch
     iterations      := 10                                    ; How many times to repeat
     scrollLines     := 8                                     ; Mouse wheel steps after each shot
@@ -24,15 +38,11 @@ F8::
     imageWidth      := 288                                   ; Example width of the dropdown image
     imageHeight     := 36                                    ; Example height of the dropdown image
 
-    MsgBox(Format("Starting capture loop with {} iterations.`nPress Ctrl+F8 to exit early.", iterations))
+    MsgBox(Format("Starting capture loop with {} iterations.`nPress Space to stop early.", iterations))
 
     ; *** IMPROVEMENT: Activate the target window before starting the loop ***
     WinActivate("ahk_exe chrome.exe") ; <-- CHANGE 'chrome.exe' to your browser's executable (e.g., 'msedge.exe', 'firefox.exe')
     Sleep(200)
-
-    ; Create folder if it does not exist
-    if !DirExist(saveFolder)
-        DirCreate(saveFolder)
 
     ; Get page URL once at the beginning and sanitize it for filename use
     pageUrl := GetActivePageUrl()
@@ -65,18 +75,28 @@ F8::
             safeUrl := "no_url_detected"
     }
 
+    ; Create subfolder for this page
+    saveFolder := baseFolder "\" safeUrl
+    if !DirExist(saveFolder)
+        DirCreate(saveFolder)
+
     ; Use screen coordinates for searching and clicking
     CoordMode("Pixel", "Screen")
     CoordMode("Mouse", "Screen")
 
     Loop iterations
     {
+        ; Check if user pressed Space to stop
+        if (stopLoop) {
+            MsgBox("Capture stopped by user at screenshot " A_Index - 1 " of " iterations ".")
+            stopLoop := false
+            return
+        }
+        
         idx := A_Index
-        ; Example: page_slug-1-of-10.png
-        fileName := Format("{}_{}-of-{}.png", safeUrl, idx, iterations)
+        ; Example: 1-of-10.png (simpler naming since folder already has the page name)
+        fileName := Format("{}-of-{}.png", idx, iterations)
         fullPath := saveFolder "\" fileName
-
-        ; ... [Image search and click logic would go here if not removed by user in previous steps] ...
 
         ; ========= SCREENSHOT =========
         CaptureFullScreen(fullPath)
@@ -89,7 +109,8 @@ F8::
         }
     }
 
-    MsgBox("Capture loop finished.")
+    MsgBox("Capture loop finished. Screenshots saved in: " saveFolder)
+    stopLoop := false
 }
 
 
