@@ -89,13 +89,6 @@ F8::
 
     Loop iterations
     {
-        ; Check if user pressed Space to stop
-        if (stopLoop) {
-            MsgBox("Page finished. " A_Index - 1 " screenshots saved.`nNavigate to next page and press F8 to continue.")
-            stopLoop := false
-            return
-        }
-        
         idx := A_Index
         ; Format with leading zeros: filename_01.png, filename_02.png, etc.
         fileName := Format("{}_{:02d}.png", safeUrl, idx)
@@ -103,6 +96,13 @@ F8::
 
         ; ========= SCREENSHOT =========
         CaptureChromeWindow(fullPath)
+
+        ; Check if user pressed Space to stop (after taking the screenshot)
+        if (stopLoop) {
+            MsgBox("Page finished. " A_Index " screenshots saved.`nNavigate to next page and press F8 to continue.")
+            stopLoop := false
+            return
+        }
 
         ; ========= SCROLL DOWN FOR NEXT ITERATION =========
         if (idx < iterations)
