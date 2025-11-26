@@ -87,6 +87,11 @@ F8::
     CoordMode("Pixel", "Screen")
     CoordMode("Mouse", "Screen")
 
+    ; Variables to track duplicate screenshots
+    lastFileSize := 0
+    duplicateCount := 0
+    maxDuplicates := 2  ; Stop after 2 identical screenshots in a row
+
     Loop iterations
     {
         idx := A_Index
@@ -96,6 +101,28 @@ F8::
 
         ; ========= SCREENSHOT =========
         CaptureChromeWindow(fullPath)
+
+        ; Check file size to detect if we've reached the bottom
+        currentFileSize := FileGetSize(fullPath)
+        
+        if (currentFileSize = lastFileSize && lastFileSize != 0) {
+            duplicateCount++
+            if (duplicateCount >= maxDuplicates) {
+                ; Delete the duplicate screenshots
+                Loop duplicateCount {
+                    dupIdx := idx - duplicateCount + A_Index
+                    dupFile := Format("{}\{}_{:02d}.png", saveFolder, safeUrl, dupIdx)
+                    if FileExist(dupFile)
+                        FileDelete(dupFile)
+                }
+                MsgBox("Reached bottom of page (detected " duplicateCount " duplicate screenshots).`n" idx - duplicateCount " screenshots saved.`nNavigate to next page and press F8 to continue.")
+                stopLoop := false
+                return
+            }
+        } else {
+            duplicateCount := 0  ; Reset counter if screenshots are different
+        }
+        lastFileSize := currentFileSize
 
         ; Check if user pressed Space to stop (after taking the screenshot)
         if (stopLoop) {
