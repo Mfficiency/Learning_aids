@@ -4,7 +4,7 @@
 global stopLoop := false
 
 ; Show a warning when the script is activated
-MsgBox("Screenshot helper is running.`nF8 = start capture`nSpace = stop current capture`nCtrl+F8 = exit")
+MsgBox("Screenshot helper is running.`nF8 = start/continue capture`nSpace (in Chrome) = finish current page`nCtrl+F8 = exit")
 
 ; ========= EXIT HOTKEY =========
 ^F8::
@@ -14,13 +14,16 @@ MsgBox("Screenshot helper is running.`nF8 = start capture`nSpace = stop current 
 }
 
 ; ========= STOP LOOP HOTKEY =========
+; Only trigger in Chrome browser
+#HotIf WinActive("ahk_exe chrome.exe")
 Space::
 {
     global stopLoop
     stopLoop := true
-    ToolTip("Stopping after current screenshot...")
+    ToolTip("Finishing current page...")
     SetTimer(() => ToolTip(), -2000)  ; Hide tooltip after 2 seconds
 }
+#HotIf
 
 ; ========= MAIN HOTKEY =========
 F8::
@@ -30,21 +33,18 @@ F8::
     
     ; ========= CONFIG =========
     baseFolder      := "D:\Code\school\screenshots"          ; Base folder for screenshots
-    imageToFind     := "input\answers_dropdown.PNG"          ; Image for ImageSearch
-    iterations      := 10                                    ; How many times to repeat
+    iterations      := 100                                   ; Max iterations per page
     scrollLines     := 8                                     ; Mouse wheel steps after each shot
-    
-    ; *** IMPORTANT: Measure your dropdown image file and adjust these dimensions ***
-    imageWidth      := 288                                   ; Example width of the dropdown image
-    imageHeight     := 36                                    ; Example height of the dropdown image
-
-    MsgBox(Format("Starting capture loop with {} iterations.`nPress Space to stop early.", iterations))
 
     ; *** IMPROVEMENT: Activate the target window before starting the loop ***
     WinActivate("ahk_exe chrome.exe") ; <-- CHANGE 'chrome.exe' to your browser's executable (e.g., 'msedge.exe', 'firefox.exe')
     Sleep(200)
 
-    ; Get page URL once at the beginning and sanitize it for filename use
+    ; *** SCROLL TO TOP OF PAGE ***
+    Send("^{Home}")  ; Ctrl+Home to jump to top
+    Sleep(500)  ; Wait for page to scroll to top
+
+    ; Get page URL and sanitize it for filename use
     pageUrl := GetActivePageUrl()
     if (pageUrl = "") {
         safeUrl := "no_url_detected"
@@ -80,6 +80,9 @@ F8::
     if !DirExist(saveFolder)
         DirCreate(saveFolder)
 
+    ToolTip("Capturing: " safeUrl)
+    SetTimer(() => ToolTip(), -2000)
+
     ; Use screen coordinates for searching and clicking
     CoordMode("Pixel", "Screen")
     CoordMode("Mouse", "Screen")
@@ -88,14 +91,14 @@ F8::
     {
         ; Check if user pressed Space to stop
         if (stopLoop) {
-            MsgBox("Capture stopped by user at screenshot " A_Index - 1 " of " iterations ".")
+            MsgBox("Page finished. " A_Index - 1 " screenshots saved.`nNavigate to next page and press F8 to continue.")
             stopLoop := false
             return
         }
         
         idx := A_Index
-        ; Example: 1-of-10.png (simpler naming since folder already has the page name)
-        fileName := Format("{}-of-{}.png", idx, iterations)
+        ; Format with leading zeros: filename_01.png, filename_02.png, etc.
+        fileName := Format("{}_{:02d}.png", safeUrl, idx)
         fullPath := saveFolder "\" fileName
 
         ; ========= SCREENSHOT =========
@@ -105,11 +108,11 @@ F8::
         if (idx < iterations)
         {
             Send("{WheelDown " scrollLines "}")
-            Sleep(1500) ; *** IMPROVEMENT: Increased sleep to allow page elements to load after scrolling ***
+            Sleep(1500) ; Wait for page elements to load after scrolling
         }
     }
 
-    MsgBox("Capture loop finished. Screenshots saved in: " saveFolder)
+    MsgBox("Reached maximum iterations (" iterations "). Screenshots saved in: " saveFolder)
     stopLoop := false
 }
 
