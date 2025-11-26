@@ -102,7 +102,7 @@ F8::
         fullPath := saveFolder "\" fileName
 
         ; ========= SCREENSHOT =========
-        CaptureFullScreen(fullPath)
+        CaptureChromeWindow(fullPath)
 
         ; ========= SCROLL DOWN FOR NEXT ITERATION =========
         if (idx < iterations)
@@ -153,9 +153,6 @@ GetActivePageUrl() {
 
 ; Capture the full primary screen and save to a PNG file using PowerShell
 CaptureFullScreen(path) {
-    ; Multi line PowerShell script - no double quotes inside
-    ; NOTE: This version uses simple string replacement for the path, assuming no spaces in 'path' or that
-    ; the script handles it correctly in execution environment.
     psScript := "
     (
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing;
@@ -169,8 +166,36 @@ $bmp.Dispose();
     )"
 
     psScript := StrReplace(psScript, "{path}", path)
+    cmd := 'powershell -NoProfile -Command "' psScript '"'
+    RunWait(cmd,, "Hide")
+}
 
-    ; Wrap script for powershell -Command
+; Capture only the Chrome window and save to a PNG file using PowerShell
+CaptureChromeWindow(path) {
+    ; Get Chrome window position and size
+    WinGetPos(&x, &y, &width, &height, "ahk_exe chrome.exe")
+    
+    psScript := "
+    (
+Add-Type -AssemblyName System.Windows.Forms,System.Drawing;
+$x = {x};
+$y = {y};
+$width = {width};
+$height = {height};
+$bmp = New-Object System.Drawing.Bitmap($width, $height);
+$g = [System.Drawing.Graphics]::FromImage($bmp);
+$g.CopyFromScreen($x, $y, 0, 0, [System.Drawing.Size]::new($width, $height));
+$bmp.Save('{path}', [System.Drawing.Imaging.ImageFormat]::Png);
+$g.Dispose();
+$bmp.Dispose();
+    )"
+
+    psScript := StrReplace(psScript, "{path}", path)
+    psScript := StrReplace(psScript, "{x}", x)
+    psScript := StrReplace(psScript, "{y}", y)
+    psScript := StrReplace(psScript, "{width}", width)
+    psScript := StrReplace(psScript, "{height}", height)
+    
     cmd := 'powershell -NoProfile -Command "' psScript '"'
     RunWait(cmd,, "Hide")
 }
