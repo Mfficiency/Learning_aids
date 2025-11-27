@@ -135,7 +135,7 @@ F8::
         if (idx < iterations)
         {
             Send("{WheelDown " scrollLines "}")
-            Sleep(1500) ; Wait for page elements to load after scrolling
+            Sleep(500) ; Wait for page elements to load after scrolling
         }
     }
 

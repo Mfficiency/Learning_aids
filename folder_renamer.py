@@ -2,7 +2,7 @@ import os
 import re
 
 # ============= CONFIGURATION =============
-DRY_RUN = True  # Set to False to actually rename folders
+DRY_RUN = False  # Set to False to actually rename folders
 TARGET_DIRECTORY = "screenshots"  # Path to folder containing subfolders to rename
 # =========================================
 
@@ -41,7 +41,20 @@ def rename_folders(directory=".", dry_run=DRY_RUN):
             without_suffix = re.sub(r'-ai-hl-paper-\d+.*$', '', without_prefix)
             
             # Replace hyphens with spaces
-            new_name = without_suffix.replace('-', ' ')
+            temp_name = without_suffix.replace('-', ' ')
+            
+            # Use regex to format: capture numbers, add dot between first two, ensure single space after numbers
+            # Pattern: one or more digits, optional space(s), one or more digits, optional space(s) or directly attached text, rest of name
+            match = re.match(r'^(\d+)\s*(\d+)\s*(.*)', temp_name)
+            
+            if match:
+                first_num = match.group(1)
+                second_num = match.group(2)
+                rest_of_name = match.group(3).strip()
+                new_name = f"{first_num}.{second_num} {rest_of_name}"
+            else:
+                # Fallback if pattern doesn't match (shouldn't happen with your files)
+                new_name = temp_name
             
             # Build full paths
             old_path = os.path.join(directory, folder)
