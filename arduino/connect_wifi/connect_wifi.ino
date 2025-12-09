@@ -24,10 +24,10 @@ bool testInternetConnection() {
   Serial.println("Testing internet connection to google.com...");
   
   WiFiClient client;
+  client.setTimeout(5000); // Set 5 second timeout
   
-  if (client.connect("google.com", 80)) {
+  if (client.connect("google.com", 80, 5000)) { // 5 second connection timeout
     Serial.println("✓ Successfully connected to google.com");
-    Serial.println("  Internet connection verified!");
     
     client.println("HEAD / HTTP/1.1");
     client.println("Host: google.com");
@@ -41,20 +41,24 @@ bool testInternetConnection() {
         client.stop();
         return false;
       }
+      delay(10); // Small delay to prevent tight loop
     }
     
     if (client.available()) {
       String line = client.readStringUntil('\n');
       Serial.print("  Server response: ");
       Serial.println(line);
+      Serial.println("  Internet connection verified!");
     }
     
     client.stop();
+    delay(100); // Give time for clean disconnect
     return true;
     
   } else {
     Serial.println("✗ Failed to connect to google.com");
     Serial.println("  WiFi connected but no internet access");
+    client.stop();
     return false;
   }
 }
@@ -71,6 +75,12 @@ void setup() {
   for (int i = 0; i < 3; i++) {
     slowBlinkOnce();
   }
+  
+  // Disconnect and clear any previous WiFi config
+  WiFi.disconnect(true);
+  delay(1000);
+  WiFi.mode(WIFI_STA);
+  delay(100);
   
   Serial.print("Connecting to WiFi: ");
   Serial.println(ssid);
@@ -136,7 +146,6 @@ void loop() {
       Serial.print("Signal: ");
       Serial.print(WiFi.RSSI());
       Serial.println(" dBm");
-      digitalWrite(INT_LED_PIN, HIGH);
       
       bool wasConnected = internetConnected;
       internetConnected = testInternetConnection();
